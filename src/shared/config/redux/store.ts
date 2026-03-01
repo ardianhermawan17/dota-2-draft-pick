@@ -1,0 +1,53 @@
+import { combineReducers, configureStore } from "@reduxjs/toolkit";
+import storage from "redux-persist/lib/storage";
+import { persistReducer, persistStore } from "redux-persist";
+import {
+  FLUSH,
+  PAUSE,
+  PERSIST,
+  PURGE,
+  REGISTER,
+  REHYDRATE,
+} from "redux-persist/es/constants";
+import authSlice from "@feature/auth/stores/auth-slice";
+import entitiesSlice from "@feature/entities/stores/entities-slice";
+import staticDraftSlice from "@feature/static-draft/stores/static-draft-slice";
+import liveDraftSlice from "@feature/live-draft/stores/live-draft-slice";
+
+const rootReducer = combineReducers({
+  auth: authSlice,
+  entities: entitiesSlice,
+  staticDraft: staticDraftSlice,
+  liveDraft: liveDraftSlice,
+});
+
+const persistConfig = {
+  key: "root",
+  version: 1,
+  storage,
+  whiteList: [""],
+  blacklist: ["auth"],
+};
+
+const persistedReducer = persistReducer(persistConfig, rootReducer);
+
+export const makeStore = () => {
+  return configureStore({
+    reducer: persistedReducer,
+    middleware: (getDefaultMiddleware) =>
+      getDefaultMiddleware({
+        serializableCheck: {
+          ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+        },
+      }).concat(
+          // middleware API
+      ),
+  });
+};
+
+export const persistor = persistStore(makeStore());
+// Infer the type of makeStore
+export type AppStore = ReturnType<typeof makeStore>;
+// Infer the `RootState` and `AppDispatch` types from the store itself
+export type RootState = ReturnType<AppStore["getState"]>;
+export type AppDispatch = AppStore["dispatch"];
