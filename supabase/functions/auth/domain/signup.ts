@@ -1,11 +1,11 @@
 // domain/signup.ts
 
 // @ts-ignore
-import { createSupabaseClient } from "../utils/db.ts";
+import { createSupabaseClient } from "../../(shared)/utils/db.ts";
 // @ts-ignore
 import { createPasswordHash } from "../utils/hash.ts";
 // @ts-ignore
-import { jsonResponse, errorResponse } from "../utils/response.ts";
+import { jsonResponse, errorResponse } from "../../(shared)/utils/response.ts";
 
 export async function handleSignup(req: Request): Promise<Response> {
     try {
@@ -15,7 +15,7 @@ export async function handleSignup(req: Request): Promise<Response> {
         const { email, password, display_name } = body;
         if (!email || !password) return errorResponse("email and password required", 400);
 
-        const supabase = createSupabaseClient();
+        const supabase = createSupabaseClient(req);
 
         // check existing user
         const { data: existing, error: selErr } = await supabase

@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS template_draft_rules (
   code varchar(255) NOT NULL, -- e.g. 'captains_mode_default'
   name varchar(255) NOT NULL,
   description text,
+  reserved_time int NOT NULL DEFAULT 130, -- total reserved time in seconds (optional)
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz
@@ -74,6 +75,10 @@ ALTER TABLE template_draft_rules
 -- Unique constraint on template code
 ALTER TABLE template_draft_rules
   ADD CONSTRAINT uniq_template_draft_rules_code UNIQUE (code);
+
+-- constrains
+ALTER TABLE template_draft_rules
+  ADD CONSTRAINT reserved_time_positive CHECK (reserved_time > 0);
 
 -- New Table: template_draft_rule_entries --------------------------------------------
 CREATE TABLE IF NOT EXISTS template_draft_rule_entries (

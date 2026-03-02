@@ -7,7 +7,7 @@ import { createClient, SupabaseClient } from "jsr:@supabase/supabase-js@2";
  * Create a Supabase client using service role key for elevated access to your tables.
  * Uses PROJECT_URL and SERVICE_ROLE_KEY environment variables.
  */
-export function createSupabaseClient(): SupabaseClient {
+export function createSupabaseClient(req: Request): SupabaseClient {
     const url = Deno.env.get("PROJECT_URL") ?? Deno.env.get("SUPABASE_URL") ?? "";
     const key = Deno.env.get("SERVICE_ROLE_KEY") ?? "";
     if (!url || !key) {
@@ -18,7 +18,7 @@ export function createSupabaseClient(): SupabaseClient {
     const client = createClient(url, key, {
         global: {
             headers: {
-                Authorization: `Bearer ${key}`,
+                Authorization: req.headers.get("Authorization") ?? `Bearer ${key}`,
             },
         },
     });

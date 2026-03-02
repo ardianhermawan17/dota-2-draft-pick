@@ -9,13 +9,14 @@ export type TemplateDraftRule = {
     code: string;
     name: string;
     description: string | null;
+    reserved_time: number;
     is_active: boolean;
     created_at: ISODateString;
     updated_at: ISODateString | null;
 };
 
 /**
- * template_draft_rules_entries table
+ * template_draft_rule_entries table
  */
 export type TemplateDraftRuleEntry = {
     id: UUID;
