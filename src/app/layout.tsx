@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import {LibraryProvider} from "@shared/providers";
+import {MainLayoutHeader} from "@shared/components/template/main-layout-header";
+import {AuthGuard} from "@shared/components/template/auth-guard";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
@@ -31,7 +33,12 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
        <LibraryProvider>
-           {children}
+           <AuthGuard>
+               <MainLayoutHeader />
+               <div className="pt-14">
+                   {children}
+               </div>
+           </AuthGuard>
        </LibraryProvider>
       </body>
     </html>

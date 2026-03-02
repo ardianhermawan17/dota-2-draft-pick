@@ -29,7 +29,7 @@ const entitiesSlice = createSlice({
 
         /* ---------- USERS ---------- */
 
-        upsertUser(state, action: PayloadAction<User>) {
+        upsertUser(state, action: PayloadAction<Omit<User, "password" | "updated_at">>) {
             state.users[action.payload.id] = action.payload;
         },
 

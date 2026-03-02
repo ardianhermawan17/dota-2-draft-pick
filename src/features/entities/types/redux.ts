@@ -6,7 +6,7 @@ import type {TemplateDraftRule, TemplateDraftRuleEntry} from "@shared/types/doma
 import type {Player, Team} from "@shared/types/domain/teams";
 
 export type EntitiesState = {
-    users: Record<string, User>;
+    users: Record<string, Omit<User, "password" | "updated_at">>;
     heroes: Record<number, Hero>;
     draftPlans: Record<string, DraftPlan>;
     bans: Record<string, Ban>;

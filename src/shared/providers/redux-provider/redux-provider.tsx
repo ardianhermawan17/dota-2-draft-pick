@@ -2,19 +2,25 @@
 import {Provider} from "react-redux";
 import React, { useRef} from "react";
 import type {AppStore} from "@shared/config/redux/store";
-import { makeStore, persistor} from "@shared/config/redux/store";
+import { makeStore} from "@shared/config/redux/store";
 import {PersistGate} from "redux-persist/integration/react";
+import {persistStore} from "redux-persist";
 
 export const ReduxProvider = ({
     children
 }: {
     children: React.ReactNode
 }) => {
-    const storeRef = useRef<AppStore>(undefined)
+    const storeRef = useRef<AppStore | null>(null);
+    // eslint-disable-next-line
+    const persistorRef = useRef<any>(null);
+
     // eslint-disable-next-line react-hooks/refs
     if (!storeRef.current) {
-        // Create the store instance the first time this renders
-        storeRef.current = makeStore()
+        const store = makeStore();
+        storeRef.current = store;
+        // eslint-disable-next-line react-hooks/refs
+        persistorRef.current = persistStore(store);
     }
 
     return (
@@ -22,7 +28,8 @@ export const ReduxProvider = ({
         <Provider store={storeRef.current}>
             <PersistGate
                 loading={false}
-                persistor={persistor}
+                // eslint-disable-next-line react-hooks/refs
+                persistor={persistorRef.current}
             >
                 {children}
             </PersistGate>

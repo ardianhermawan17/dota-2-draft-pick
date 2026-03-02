@@ -37,7 +37,7 @@ export async function handleLogin(req: Request): Promise<Response> {
         const { password_hash, ...publicUser } = user as any;
 
         // Optionally: create and return a session token here (JWT or similar).
-        return jsonResponse({ user: publicUser }, 200);
+        return jsonResponse({ ...publicUser },'Login Success !' ,200);
     } catch (err) {
         console.error("login error:", err);
         return errorResponse((err as any).message ?? "Internal error", 500);

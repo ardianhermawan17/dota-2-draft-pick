@@ -1,6 +1,10 @@
 // utils/response.ts
-export function jsonResponse(data: any, status = 200) {
-    return new Response(JSON.stringify(data), {
+export function jsonResponse(data: any, message: string = 'success', status = 200) {
+    return new Response(JSON.stringify({
+        status,
+        message,
+        data,
+    }), {
         status,
         headers: {
             "Content-Type": "application/json",
@@ -11,5 +15,5 @@ export function jsonResponse(data: any, status = 200) {
 }
 
 export function errorResponse(message: string, status = 400) {
-    return jsonResponse({ message }, status);
+    return jsonResponse({}, 'Action failed !',status);
 }

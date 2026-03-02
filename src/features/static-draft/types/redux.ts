@@ -1,25 +1,32 @@
+export type StaticDraftPhase =
+    | "idle"
+    | "choose_template"
+    | "choose_side"
+    | "in_progress"
+    | "completed";
+
 export type TeamSide = "radiant" | "dire";
-export type StaticActionType = "ban" | "preferred_pick";
+export type DraftActionType = "ban" | "pick";
 
 export type StaticDraftState = {
     currentPlanId: string | null;
 
-    selection: {
-        teamSide: TeamSide;
-        actionType: StaticActionType;
+    phase: StaticDraftPhase;
+
+    template: {
+        selectedRuleId: string | null;
     };
 
-    heroBrowser: {
-        isOpen: boolean;
-    };
-
-    editing: {
-        editingBanId: string | null;
-        editingPreferredPickId: string | null;
+    engine: {
+        currentSequenceIndex: number;
+        currentActionType: DraftActionType | null;
+        currentTeamSide: TeamSide | null;
+        remainingActionsInGroup: number;
     };
 
     ui: {
-        isSaving: boolean;
+        selectedHeroId: number | null;
+        isLocked: boolean;
         error: string | null;
     };
 };

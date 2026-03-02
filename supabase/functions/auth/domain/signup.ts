@@ -54,7 +54,7 @@ export async function handleSignup(req: Request): Promise<Response> {
 
         const user = Array.isArray(data) ? data[0] : data;
 
-        return jsonResponse({ user }, 201);
+        return jsonResponse({ ...user }, 'Signup success',201);
     } catch (err) {
         console.error("signup error:", err);
         return errorResponse((err as any).message ?? "Internal error", 500);
