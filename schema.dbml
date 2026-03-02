@@ -1,0 +1,200 @@
+Table users {
+  id uuid [pk, default: `gen_random_uuid()`]
+  email varchar(200) [not null, unique]
+  password_hash varchar(255) [not null] -- hashed password
+  display_name varchar(100)
+  avatar_url varchar(255)
+  role varchar [not, default: 'user'] -- values: 'user','admin'
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz
+}
+
+Table heroes {
+  open_dota_id int [pk] -- primary from OpenDota
+  name varchar(200)
+  slug varchar(220)
+  local_name varchar(100)
+  primary_attr varchar(24)
+  attack_type varchar(24)
+  roles jsonb -- array of common roles/strings
+  icons jsonb -- {portrait_url, full_url}
+  meta_cached_at timestamptz -- last refresh
+}
+
+Table game_modes {
+  id serial [pk]
+  code varchar(200) [not null, unique] -- e.g. 'game_mode_captains_mode'
+  name varchar(200)
+  created_at timestamptz [default: `now()`]
+}
+
+Table template_draft_rules {
+  id uuid [pk, default: `gen_random_uuid()`]
+  game_mode_id int [ref: - game_modes.id] --> game_modes.id
+  code varchar(255) [not null] -- e.g. 'captains_mode_default'
+  name varchar(255) [not null]
+  description text [null]
+  is_active boolean [default: true]
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz
+}
+
+Table template_draft_rules_entries {
+  id uuid [pk, default: `gen_random_uuid()`]
+  rule_id uuid [ref: > template_draft_rules.id] --> template_draft_rules.id
+  sequence_index int -- group order (1,2,3...)
+  action_type varchar(20) -- enum('ban','pick')
+  team_side varchar(50) -- enum('radiant','dire')
+  count int -- how many consecutive actions (e.g., 4 for "Ban 4")
+  per_action_seconds int -- optional override
+  note text -- optional note/label (ex: "Initial bans")
+  created_at timestamptz
+}
+
+Table draft_plans {
+  id uuid [pk, default: `gen_random_uuid()`]
+  owner_id uuid [ref: > users.id] --> users.id
+  template_rule_id uuid [ref: > template_draft_rules.id, null] --> template_draft_rules.id
+  name varchar(255) [not null]
+  description text
+  mode varchar(50) [not null, default: 'static'] -- enum('static','live')
+  is_public boolean [default: false] -- optional (default false)
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz
+  version int [default: 1] -- optimistic lock for edits
+
+  /* Note: template_rule_id is nullable. Business rule enforced by DB constraint:
+     - template_rule_id MAY BE NULL when mode = 'static'
+     - template_rule_id MUST NOT BE NULL when mode = 'live'
+     Implemented in SQL as:
+       CHECK (mode <> 'live' OR template_rule_id IS NOT NULL)
+  */
+}
+
+Table bans {
+  id uuid [pk, default: `gen_random_uuid()`]
+  plan_id uuid [ref: > draft_plans.id] ---> draft_plans.id
+  hero_id int [ref: > heroes.open_dota_id] ---> heroes.open_dota_id
+  team_side varchar(20) -- enum('radiant','dire')
+  note text
+  order_index int -- position in draft order
+  created_at timestamptz [default: `now()`]
+}
+
+Table preferred_picks {
+  id uuid [pk, default: `gen_random_uuid()`]
+  plan_id uuid [ref: > draft_plans.id] ---> draft_plans.id
+  hero_id int [ref: > heroes.open_dota_id] ---> heroes.open_dota_id
+  team_side varchar(20) -- enum('radiant','dire')
+  role varchar -- text or enum(e.g., 'carry','midlane','offlane', 'soft_support', 'hard_support)
+  priority varchar -- enum('high','medium','low')
+  note text [null] -- optional note on the pick
+  order_index int -- intended pick order / preference score
+  created_at timestamptz [default: `now()`]
+}
+
+Table enemy_threats {
+  id uuid [pk, default: `gen_random_uuid()`]
+  plan_id uuid [ref: > draft_plans.id]
+  hero_id int [ref: > heroes.open_dota_id]
+  note text
+  created_at timestamptz [default: `now()`]
+}
+
+Table item_timing_notes {
+  id uuid [pk, default: `gen_random_uuid()`]
+  plan_id uuid [ref: > draft_plans.id]
+  timing_key varchar(255) -- e.g. 'BKB ~18 min', or structured 'bkb_18'
+  timing_minute int -- optional numeric minute for sorting/filters
+  explanation text
+  created_at timestamptz [default: `now()`]
+}
+
+Table teams {
+  id uuid [pk, default: `gen_random_uuid()`]
+  owner_id uuid [ref: > users.id]
+  name varchar(255)
+  slug varchar(255)
+  logo_url varchar(255)
+  metadata jsonb -- e.g., per-player placeholders, tags
+  created_at timestamptz [default: `now()`]
+}
+
+Table players {
+  id uuid [pk, default: `gen_random_uuid()`]
+  team_id uuid [ref: > teams.id]
+  name varchar(255)
+  slot int [null] -- 1(carry),2(midlane),3(offlane),4(soft_support),5(hard_support) for team roster positions, optional
+  avatar_url varchar
+  preferred_roles jsonb
+  created_at timestamptz [default: `now()`]
+}
+
+Table draft_sessions {
+  id uuid [pk, default: `gen_random_uuid()`]
+  plan_id uuid [ref: > draft_plans.id]
+  radiant_team_id uuid [ref: > teams.id]
+  dire_team_id uuid [ref: > teams.id]
+  started_at timestamptz
+  ended_at timestamptz
+  current_phase varchar(50) -- e.g. 'ban', 'pick', 'complete'
+  reserved_seconds_left int -- total reserved pool seconds remaining (optional)
+  created_at timestamptz [default: `now()`]
+}
+
+Table session_actions {
+  id uuid [pk, default: `gen_random_uuid()`]
+  session_id uuid [ref: > draft_sessions.id]
+  action_type varchar(50) -- enum('ban','pick')
+  hero_id int [ref: > heroes.open_dota_id]
+  team_side varchar(20) -- enum('radiant','dire')
+  order_index int -- absolute order in the session timeline
+  role varchar(50) [null] -- optional role for a pick
+  priority varchar(50) [null] -- optional
+  note text
+  created_at timestamptz [default: `now()`]
+}
+
+Table cached_hero_matchups {
+  id serial [pk]
+  hero_id int [ref: > heroes.open_dota_id]
+  counter_hero_id int [ref: > heroes.open_dota_id]
+  win_rate numeric -- precomputed (wilson score or similar)
+  games int
+  last_refreshed timestamptz
+}
+
+Table cached_hero_item_timings {
+  id serial [pk]
+  hero_id int [ref: > heroes.open_dota_id]
+  item_key varchar(255) -- e.g. 'bkb_18' or 'bkb_20_25'
+  win_rate numeric
+  games int
+  duration_bucket varchar(10) -- e.g. 'early','mid','late'
+  last_refreshed timestamptz
+}
+
+Table plan_snapshots {
+  id uuid [pk, default: `gen_random_uuid()`]
+  plan_id uuid [ref: > draft_plans.id]
+  snapshot jsonb -- full denormalized snapshot for quick share/export
+  created_at timestamptz [default: `now()`]
+}
+
+/*
+Indexes / constraints (to implement in migrations):
+
+- UNIQUE(draft_plans.owner_id, draft_plans.name)
+- UNIQUE(bans.plan_id, bans.hero_id, bans.team_side)
+- UNIQUE(preferred_picks.plan_id, preferred_picks.hero_id, preferred_picks.team_side)
+- UNIQUE(enemy_threats.plan_id, enemy_threats.hero_id)
+- UNIQUE(session_actions.session_id, session_actions.order_index)
+- UNIQUE(session_actions.session_id, session_actions.hero_id)
+
+- UNIQUE(template_draft_rules.code)
+- UNIQUE(template_draft_rule_entries.rule_id, template_draft_rule_entries.sequence_index)
+
+RLS policies (Supabase):
+- Enforce owner_id = auth.uid() on draft_plans, bans, preferred_picks, enemy_threats, item_timing_notes, plan_snapshots
+- Admin role allowed to bypass via role check
+*/

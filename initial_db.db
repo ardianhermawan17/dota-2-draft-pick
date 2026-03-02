@@ -1,0 +1,501 @@
+-- Enable extensions -----------------------------------------------------------------
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";  -- provides gen_random_uuid()
+
+-- Schemas (optional) ----------------------------------------------------------------
+-- CREATE SCHEMA IF NOT EXISTS dota2-draft-plan;  -- uncomment if you want a dedicated schema and prefix tables with app.
+
+-- Table: users ----------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS users (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  email varchar(200) NOT NULL UNIQUE,
+  password_hash varchar(255) NOT NULL,
+  display_name varchar(100),
+  avatar_url varchar(255),
+  role varchar NOT NULL DEFAULT 'user',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz
+);
+
+COMMENT ON TABLE users IS 'Application users';
+COMMENT ON COLUMN users.role IS 'Role for access control. Allowed: ''user'', ''admin''. See CHECK constraint below.';
+-- enforce roles
+ALTER TABLE users
+  ADD CONSTRAINT users_role_check CHECK (role IN ('user','admin'));
+
+COMMENT ON COLUMN users.email IS 'Unique email used for sign-in';
+
+-- Table: heroes ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS heroes (
+  open_dota_id int PRIMARY KEY, -- primary id from OpenDota
+  name varchar(200),
+  slug varchar(220),
+  local_name varchar(100),
+  primary_attr varchar(24),
+  attack_type varchar(24),
+  roles jsonb,
+  icons jsonb,
+  meta_cached_at timestamptz
+);
+
+COMMENT ON TABLE heroes IS 'Hero metadata (sourced from OpenDota).';
+COMMENT ON COLUMN heroes.roles IS 'JSONB array of role strings (e.g. [\"carry\",\"support\"])';
+COMMENT ON COLUMN heroes.icons IS 'JSONB object, e.g. { "portrait_url": "...", "full_url": "..." }';
+
+-- Table: game_modes -----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS game_modes (
+  id serial PRIMARY KEY,
+  code varchar(200) NOT NULL UNIQUE,
+  name varchar(200),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE game_modes IS 'Available game modes (e.g. captains mode).';
+COMMENT ON COLUMN game_modes.code IS 'Unique code, e.g. ''game_mode_captains_mode''.';
+
+-- New Table: template_draft_rules ---------------------------------------------------
+CREATE TABLE IF NOT EXISTS template_draft_rules (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  game_mode_id int,
+  code varchar(255) NOT NULL, -- e.g. 'captains_mode_default'
+  name varchar(255) NOT NULL,
+  description text,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz
+);
+
+COMMENT ON TABLE template_draft_rules IS 'Template rules for drafting (shared presets).';
+COMMENT ON COLUMN template_draft_rules.code IS 'Unique code, e.g. ''captains_mode_default''';
+COMMENT ON COLUMN template_draft_rules.is_active IS 'Whether this template is available for use';
+
+ALTER TABLE template_draft_rules
+  ADD CONSTRAINT fk_template_draft_rules_gamemode FOREIGN KEY (game_mode_id) REFERENCES game_modes(id) ON DELETE SET NULL;
+
+-- Unique constraint on template code
+ALTER TABLE template_draft_rules
+  ADD CONSTRAINT uniq_template_draft_rules_code UNIQUE (code);
+
+-- New Table: template_draft_rule_entries --------------------------------------------
+CREATE TABLE IF NOT EXISTS template_draft_rule_entries (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  rule_id uuid NOT NULL,
+  sequence_index int NOT NULL, -- group order (1,2,3...)
+  action_type varchar(20) NOT NULL, -- enum('ban','pick')
+  team_side varchar(50), -- enum('radiant','dire') -- who acts
+  count int, -- how many consecutive actions (e.g., 4 for "Ban 4")
+  per_action_seconds int, -- optional override
+  note text, -- optional note/label (ex: "Initial bans")
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE template_draft_rule_entries IS 'Entries (steps) that compose a template draft rule.';
+COMMENT ON COLUMN template_draft_rule_entries.action_type IS 'Action type enum: ''ban'' or ''pick''';
+COMMENT ON COLUMN template_draft_rule_entries.team_side IS 'Team side enum: ''radiant'' or ''dire''';
+
+ALTER TABLE template_draft_rule_entries
+  ADD CONSTRAINT fk_template_draft_rule_entries_rule FOREIGN KEY (rule_id) REFERENCES template_draft_rules(id) ON DELETE CASCADE;
+
+-- Unique constraint: one sequence index per rule
+ALTER TABLE template_draft_rule_entries
+  ADD CONSTRAINT uniq_template_draft_rule_entries_rule_seq UNIQUE (rule_id, sequence_index);
+
+-- Table: draft_plans ----------------------------------------------------------------
+-- Edited: template_rule_id is nullable; we enforce presence for live mode with a CHECK constraint below.
+CREATE TABLE IF NOT EXISTS draft_plans (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id uuid NOT NULL,
+  game_mode_id int,
+  template_rule_id uuid,                       -- nullable; required when mode = 'live' (see CHECK)
+  name varchar(255) NOT NULL,
+  description text,
+  mode varchar(50) NOT NULL DEFAULT 'static',
+  is_public boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz,
+  version int NOT NULL DEFAULT 1
+);
+
+COMMENT ON TABLE draft_plans IS 'User-created draft plans (owner = users.id).';
+COMMENT ON COLUMN draft_plans.mode IS 'Draft mode: enum(''static'',''live'')';
+COMMENT ON COLUMN draft_plans.template_rule_id IS 'Nullable when mode = ''static''. Required when mode = ''live''.';
+
+ALTER TABLE draft_plans
+  ADD CONSTRAINT draft_plans_mode_check CHECK (mode IN ('static','live'));
+
+ALTER TABLE draft_plans
+  ADD CONSTRAINT fk_draft_plans_owner FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE;
+
+ALTER TABLE draft_plans
+  ADD CONSTRAINT fk_draft_plans_gamemode FOREIGN KEY (game_mode_id) REFERENCES game_modes(id) ON DELETE SET NULL;
+
+-- FK to template_draft_rules (nullable)
+ALTER TABLE draft_plans
+  ADD CONSTRAINT fk_draft_plans_template_rule FOREIGN KEY (template_rule_id) REFERENCES template_draft_rules(id) ON DELETE SET NULL;
+
+-- Enforce: when mode = 'live' template_rule_id MUST be present; when mode = 'static' it MAY be NULL
+ALTER TABLE draft_plans
+  ADD CONSTRAINT draft_plans_template_rule_required_for_live CHECK (mode <> 'live' OR template_rule_id IS NOT NULL);
+
+-- Unique constraint: owner + name
+ALTER TABLE draft_plans
+  ADD CONSTRAINT uniq_draft_plans_owner_name UNIQUE (owner_id, name);
+
+-- Table: bans -----------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS bans (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  plan_id uuid NOT NULL,
+  hero_id int NOT NULL,
+  team_side varchar(20),
+  note text,
+  order_index int,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE bans IS 'Banned heroes for a draft plan.';
+COMMENT ON COLUMN bans.team_side IS 'Team side, enum(''radiant'',''dire'')';
+
+ALTER TABLE bans
+  ADD CONSTRAINT bans_team_side_check CHECK (team_side IS NULL OR team_side IN ('radiant','dire'));
+
+ALTER TABLE bans
+  ADD CONSTRAINT fk_bans_plan FOREIGN KEY (plan_id) REFERENCES draft_plans(id) ON DELETE CASCADE;
+
+ALTER TABLE bans
+  ADD CONSTRAINT fk_bans_hero FOREIGN KEY (hero_id) REFERENCES heroes(open_dota_id) ON DELETE RESTRICT;
+
+-- Unique constraint: one hero per plan+side
+ALTER TABLE bans
+  ADD CONSTRAINT uniq_bans_plan_hero_side UNIQUE (plan_id, hero_id, team_side);
+
+-- Table: preferred_picks ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS preferred_picks (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  plan_id uuid NOT NULL,
+  hero_id int NOT NULL,
+  team_side varchar(20),
+  role varchar,
+  priority varchar,
+  note text,
+  order_index int,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE preferred_picks IS 'Preferred picks (prioritized heroes) for a plan.';
+COMMENT ON COLUMN preferred_picks.priority IS 'priority enum: high, medium, low';
+
+ALTER TABLE preferred_picks
+  ADD CONSTRAINT preferred_picks_team_side_check CHECK (team_side IS NULL OR team_side IN ('radiant','dire'));
+
+ALTER TABLE preferred_picks
+  ADD CONSTRAINT preferred_picks_priority_check CHECK (priority IS NULL OR priority IN ('high','medium','low'));
+
+ALTER TABLE preferred_picks
+  ADD CONSTRAINT fk_preferred_picks_plan FOREIGN KEY (plan_id) REFERENCES draft_plans(id) ON DELETE CASCADE;
+
+ALTER TABLE preferred_picks
+  ADD CONSTRAINT fk_preferred_picks_hero FOREIGN KEY (hero_id) REFERENCES heroes(open_dota_id) ON DELETE RESTRICT;
+
+-- Unique constraint: one preferred pick per plan+hero+side
+ALTER TABLE preferred_picks
+  ADD CONSTRAINT uniq_preferred_picks_plan_hero_side UNIQUE (plan_id, hero_id, team_side);
+
+-- Table: enemy_threats --------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS enemy_threats (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  plan_id uuid NOT NULL,
+  hero_id int NOT NULL,
+  note text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE enemy_threats IS 'Heroes considered threats for a plan.';
+
+ALTER TABLE enemy_threats
+  ADD CONSTRAINT fk_enemy_threats_plan FOREIGN KEY (plan_id) REFERENCES draft_plans(id) ON DELETE CASCADE;
+
+ALTER TABLE enemy_threats
+  ADD CONSTRAINT fk_enemy_threats_hero FOREIGN KEY (hero_id) REFERENCES heroes(open_dota_id) ON DELETE RESTRICT;
+
+ALTER TABLE enemy_threats
+  ADD CONSTRAINT uniq_enemy_threats_plan_hero UNIQUE (plan_id, hero_id);
+
+-- Table: item_timing_notes ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS item_timing_notes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  plan_id uuid NOT NULL,
+  timing_key varchar(255) NOT NULL,
+  timing_minute int,
+  explanation text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE item_timing_notes IS 'Notes about item timing (e.g. BKB at minute 18).';
+
+ALTER TABLE item_timing_notes
+  ADD CONSTRAINT fk_item_timing_notes_plan FOREIGN KEY (plan_id) REFERENCES draft_plans(id) ON DELETE CASCADE;
+
+-- Table: teams ----------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS teams (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id uuid NOT NULL,
+  name varchar(255),
+  slug varchar(255),
+  logo_url varchar(255),
+  metadata jsonb,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE teams IS 'Teams created by users.';
+ALTER TABLE teams
+  ADD CONSTRAINT fk_teams_owner FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE;
+
+-- Table: players --------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS players (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  team_id uuid NOT NULL,
+  name varchar(255),
+  slot int,
+  avatar_url varchar(255),
+  preferred_roles jsonb,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE players IS 'Player roster entries for teams.';
+COMMENT ON COLUMN players.slot IS 'Optional roster slot: 1...5 mapping to roles (carry,...).';
+
+ALTER TABLE players
+  ADD CONSTRAINT fk_players_team FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE;
+
+-- Optional index: ensure team slot uniqueness if you want one player per slot
+-- CREATE UNIQUE INDEX IF NOT EXISTS uniq_players_team_slot ON players (team_id, slot) WHERE slot IS NOT NULL;
+
+-- Table: draft_sessions -------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS draft_sessions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  plan_id uuid NOT NULL,
+  radiant_team_id uuid,
+  dire_team_id uuid,
+  started_at timestamptz,
+  ended_at timestamptz,
+  current_phase varchar(50),
+  reserved_seconds_left int,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE draft_sessions IS 'Active or past drafting sessions based on a plan.';
+
+ALTER TABLE draft_sessions
+  ADD CONSTRAINT fk_draft_sessions_plan FOREIGN KEY (plan_id) REFERENCES draft_plans(id) ON DELETE CASCADE;
+
+ALTER TABLE draft_sessions
+  ADD CONSTRAINT fk_draft_sessions_radiant_team FOREIGN KEY (radiant_team_id) REFERENCES teams(id) ON DELETE SET NULL;
+
+ALTER TABLE draft_sessions
+  ADD CONSTRAINT fk_draft_sessions_dire_team FOREIGN KEY (dire_team_id) REFERENCES teams(id) ON DELETE SET NULL;
+
+-- Table: session_actions -----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS session_actions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id uuid NOT NULL,
+  action_type varchar(50) NOT NULL,
+  hero_id int NOT NULL,
+  team_side varchar(20),
+  order_index int NOT NULL,
+  role varchar(50),
+  priority varchar(50),
+  note text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE session_actions IS 'Timeline actions (bans/picks) inside a draft session.';
+COMMENT ON COLUMN session_actions.action_type IS 'Enum: ''ban'' or ''pick''.';
+
+ALTER TABLE session_actions
+  ADD CONSTRAINT session_actions_action_type_check CHECK (action_type IN ('ban','pick'));
+
+ALTER TABLE session_actions
+  ADD CONSTRAINT session_actions_team_side_check CHECK (team_side IS NULL OR team_side IN ('radiant','dire'));
+
+ALTER TABLE session_actions
+  ADD CONSTRAINT fk_session_actions_session FOREIGN KEY (session_id) REFERENCES draft_sessions(id) ON DELETE CASCADE;
+
+ALTER TABLE session_actions
+  ADD CONSTRAINT fk_session_actions_hero FOREIGN KEY (hero_id) REFERENCES heroes(open_dota_id) ON DELETE RESTRICT;
+
+-- Uniqueness constraints requested:
+ALTER TABLE session_actions
+  ADD CONSTRAINT uniq_session_actions_session_order UNIQUE (session_id, order_index);
+
+ALTER TABLE session_actions
+  ADD CONSTRAINT uniq_session_actions_session_hero UNIQUE (session_id, hero_id);
+
+-- Table: cached_hero_matchups -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS cached_hero_matchups (
+  id serial PRIMARY KEY,
+  hero_id int NOT NULL,
+  counter_hero_id int NOT NULL,
+  win_rate numeric,
+  games int,
+  last_refreshed timestamptz
+);
+
+COMMENT ON TABLE cached_hero_matchups IS 'Cached matchup stats for hero vs counter_hero.';
+ALTER TABLE cached_hero_matchups
+  ADD CONSTRAINT fk_cached_hero_matchups_hero FOREIGN KEY (hero_id) REFERENCES heroes(open_dota_id) ON DELETE CASCADE;
+
+ALTER TABLE cached_hero_matchups
+  ADD CONSTRAINT fk_cached_hero_matchups_counter FOREIGN KEY (counter_hero_id) REFERENCES heroes(open_dota_id) ON DELETE CASCADE;
+
+-- Add a unique index to avoid duplicate pairing (hero, counter_hero)
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_cached_hero_matchups_pair ON cached_hero_matchups (hero_id, counter_hero_id);
+
+-- Table: cached_hero_item_timings ---------------------------------------------------
+CREATE TABLE IF NOT EXISTS cached_hero_item_timings (
+  id serial PRIMARY KEY,
+  hero_id int NOT NULL,
+  item_key varchar(255) NOT NULL,
+  win_rate numeric,
+  games int,
+  duration_bucket varchar(10),
+  last_refreshed timestamptz
+);
+
+COMMENT ON TABLE cached_hero_item_timings IS 'Cached stats for item timings per hero.';
+ALTER TABLE cached_hero_item_timings
+  ADD CONSTRAINT fk_cached_hero_item_timings_hero FOREIGN KEY (hero_id) REFERENCES heroes(open_dota_id) ON DELETE CASCADE;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_cached_hero_item_timings_key ON cached_hero_item_timings (hero_id, item_key, duration_bucket);
+
+-- Table: plan_snapshots ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS plan_snapshots (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  plan_id uuid NOT NULL,
+  snapshot jsonb NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE plan_snapshots IS 'Denormalized snapshot of a plan for quick export/share.';
+
+ALTER TABLE plan_snapshots
+  ADD CONSTRAINT fk_plan_snapshots_plan FOREIGN KEY (plan_id) REFERENCES draft_plans(id) ON DELETE CASCADE;
+
+-- Indexes to speed common lookups ---------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_draft_plans_owner ON draft_plans (owner_id);
+CREATE INDEX IF NOT EXISTS idx_bans_plan ON bans (plan_id);
+CREATE INDEX IF NOT EXISTS idx_preferred_picks_plan ON preferred_picks (plan_id);
+CREATE INDEX IF NOT EXISTS idx_enemy_threats_plan ON enemy_threats (plan_id);
+CREATE INDEX IF NOT EXISTS idx_item_timing_notes_plan ON item_timing_notes (plan_id);
+CREATE INDEX IF NOT EXISTS idx_plan_snapshots_plan ON plan_snapshots (plan_id);
+CREATE INDEX IF NOT EXISTS idx_draft_sessions_plan ON draft_sessions (plan_id);
+CREATE INDEX IF NOT EXISTS idx_session_actions_session ON session_actions (session_id);
+
+-- Row-Level Security (RLS) example policies for Supabase --------------------------------
+-- Note: adapt these policies to your auth claims and application logic. Supabase typically
+-- provides JWT claims via current_setting('jwt.claims.*', true). Below are example policies
+-- that restrict plan ownership to auth.uid() and allow admins to bypass.
+
+-- Enable RLS on owner-bound tables (usually the ones with owner_id: draft_plans, bans, preferred_picks, enemy_threats, item_timing_notes, plan_snapshots, teams)
+ALTER TABLE draft_plans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE preferred_picks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE enemy_threats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE item_timing_notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE plan_snapshots ENABLE ROW LEVEL SECURITY;
+ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
+
+-- Example: allow the row-owner (auth.uid()) and admin role to SELECT/INSERT/UPDATE/DELETE on draft_plans
+CREATE POLICY draft_plans_owner_policy ON draft_plans
+  USING ( owner_id = auth.uid() OR current_setting('jwt.claims.role', true) = 'admin' )
+  WITH CHECK ( owner_id = auth.uid() OR current_setting('jwt.claims.role', true) = 'admin' );
+
+-- Apply similar policies for child tables that reference owner via plan_id or owner_id:
+-- bans (authorize based on the parent plan.owner_id)
+CREATE POLICY bans_owner_policy ON bans
+  USING (
+    (EXISTS (
+      SELECT 1 FROM draft_plans p WHERE p.id = bans.plan_id AND (p.owner_id = auth.uid() OR current_setting('jwt.claims.role', true) = 'admin')
+    ))
+  )
+  WITH CHECK (
+    (EXISTS (
+      SELECT 1 FROM draft_plans p WHERE p.id = bans.plan_id AND (p.owner_id = auth.uid() OR current_setting('jwt.claims.role', true) = 'admin')
+    ))
+  );
+
+CREATE POLICY preferred_picks_owner_policy ON preferred_picks
+  USING (
+    (EXISTS (SELECT 1 FROM draft_plans p WHERE p.id = preferred_picks.plan_id AND (p.owner_id = auth.uid() OR current_setting('jwt.claims.role', true) = 'admin')))
+  )
+  WITH CHECK (
+    (EXISTS (SELECT 1 FROM draft_plans p WHERE p.id = preferred_picks.plan_id AND (p.owner_id = auth.uid() OR current_setting('jwt.claims.role', true) = 'admin')))
+  );
+
+CREATE POLICY enemy_threats_owner_policy ON enemy_threats
+  USING (
+    (EXISTS (SELECT 1 FROM draft_plans p WHERE p.id = enemy_threats.plan_id AND (p.owner_id = auth.uid() OR current_setting('jwt.claims.role', true) = 'admin')))
+  )
+  WITH CHECK (
+    (EXISTS (SELECT 1 FROM draft_plans p WHERE p.id = enemy_threats.plan_id AND (p.owner_id = auth.uid() OR current_setting('jwt.claims.role', true) = 'admin')))
+  );
+
+CREATE POLICY item_timing_notes_owner_policy ON item_timing_notes
+  USING (
+    (EXISTS (SELECT 1 FROM draft_plans p WHERE p.id = item_timing_notes.plan_id AND (p.owner_id = auth.uid() OR current_setting('jwt.claims.role', true) = 'admin')))
+  )
+  WITH CHECK (
+    (EXISTS (SELECT 1 FROM draft_plans p WHERE p.id = item_timing_notes.plan_id AND (p.owner_id = auth.uid() OR current_setting('jwt.claims.role', true) = 'admin')))
+  );
+
+CREATE POLICY plan_snapshots_owner_policy ON plan_snapshots
+  USING (
+    (EXISTS (SELECT 1 FROM draft_plans p WHERE p.id = plan_snapshots.plan_id AND (p.owner_id = auth.uid() OR current_setting('jwt.claims.role', true) = 'admin')))
+  )
+  WITH CHECK (
+    (EXISTS (SELECT 1 FROM draft_plans p WHERE p.id = plan_snapshots.plan_id AND (p.owner_id = auth.uid() OR current_setting('jwt.claims.role', true) = 'admin')))
+  );
+
+CREATE POLICY teams_owner_policy ON teams
+  USING ( owner_id = auth.uid() OR current_setting('jwt.claims.role', true) = 'admin' )
+  WITH CHECK ( owner_id = auth.uid() OR current_setting('jwt.claims.role', true) = 'admin' );
+
+-- Notes about policy implementation:
+-- 1) Supabase's JWT exposes role in current_setting('jwt.claims.role', true). Adjust if your JWT/claims differ.
+-- 2) You may want to add separate read-only policies for public resources (e.g., if draft_plans.is_public = true).
+--    Example read policy: allow SELECT where is_public is true:
+-- CREATE POLICY draft_plans_public_select ON draft_plans FOR SELECT USING (is_public = true OR owner_id = auth.uid() OR current_setting('jwt.claims.role', true) = 'admin');
+
+-- Helpful housekeeping: update timestamps trigger (optional) --------------------------------
+-- If you want updated_at to auto-update on row change, add a trigger:
+CREATE OR REPLACE FUNCTION update_timestamp() RETURNS trigger AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Attach trigger to tables that have updated_at
+DO $$
+BEGIN
+  -- draft_plans
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'trg_update_draft_plans_updated_at'
+  ) THEN
+    CREATE TRIGGER trg_update_draft_plans_updated_at
+      BEFORE UPDATE ON draft_plans
+      FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+  END IF;
+
+  -- template_draft_rules (has updated_at)
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'trg_update_template_draft_rules_updated_at'
+  ) THEN
+    CREATE TRIGGER trg_update_template_draft_rules_updated_at
+      BEFORE UPDATE ON template_draft_rules
+      FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+  END IF;
+
+  -- add other triggers similarly if desired (e.g., teams, players...)
+END;
+$$;
+
+-- End of DDL -------------------------------------------------------------------------
