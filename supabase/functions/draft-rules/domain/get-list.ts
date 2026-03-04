@@ -8,7 +8,7 @@ import { jsonResponse, errorResponse } from "../../(shared)/utils/response.ts";
 export async function handleGetList(req: Request) {
     const url = new URL(req.url);
 
-    const maxParam = url.searchParams.get("max");
+    const maxParam = url.searchParams.get("limit");
     let max = Number(maxParam) || 20;
 
     if (max < 1) max = 1;
