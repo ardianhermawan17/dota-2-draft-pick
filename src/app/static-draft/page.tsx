@@ -161,7 +161,7 @@ export default function StaticDraftPage() {
             <div className="p-6 flex flex-col gap-8">
                 <h1 className="text-2xl font-bold">Static Draft Page</h1>
 
-                <Button onClick={() => setIsToggle((prevState) => !prevState)}>Toggle shit</Button>
+                <Button onClick={() => setIsToggle((prevState) => !prevState)}>Toggle Side</Button>
                 {/* Container reads entities from Redux */}
                 <DraftSchedule
                     template_draft_rule_entries={DATA_ENTRIES}

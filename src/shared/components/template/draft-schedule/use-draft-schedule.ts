@@ -31,6 +31,17 @@ export function useDraftScheduleMapper(params: {
         return entriesArray.filter((e) => e.rule_id === ruleId)
     }, [entriesArray, ruleId])
 
+    const getRandomUserAction = (): DraftChipInput["user_action"] => {
+        const options: DraftChipInput["user_action"][] = [
+            "pick",
+            "ban",
+            "pick_with_hero",
+            "ban_with_hero",
+            "idle"
+        ]
+        return options[Math.floor(Math.random() * options.length)]
+    }
+
     // 3) expand entries by `count` into chipProps and assign increasing sequence_number
     const chipProps = useMemo<DraftChipInput[]>(() => {
         const out: DraftChipInput[] = []
@@ -41,8 +52,12 @@ export function useDraftScheduleMapper(params: {
             for (let i = 0; i < count; i += 1) {
                 const key = `${entry.id}::${i}`
 
+                // Use Static
                 const user_action: DraftChipInput["user_action"] =
-                    entry.action_type === "pick" ? "pick" : "ban"
+                    entry.action_type === "pick" ? "pick_with_hero" : "ban"
+
+                // Use Random
+                // const user_action: DraftChipInput['user_action'] = getRandomUserAction()
 
                 out.push({
                     key,

@@ -66,7 +66,7 @@ export function SplitDraftBackground({
             : "radial-gradient(circle at center, rgba(239,68,68,0.35), rgba(239,68,68,0.15) 30%, rgba(239,68,68,0) 55%)";
 
     return (
-        <div className="relative min-h-screen w-full overflow-hidden bg-[#0b0b0d]">
+        <div className="relative w-full min-h-0 max-h-10/12 overflow-hidden bg-[#0b0b0d] rounded-2xl p-3">
             {/* Left: Radiant base */}
             <motion.div
                 className="absolute inset-y-0 left-0 w-1/2 pointer-events-none"

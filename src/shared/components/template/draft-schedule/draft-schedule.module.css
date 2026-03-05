@@ -1,91 +1,78 @@
-/* draft-schedule.module.css */
+/* draft-schedule.module.css — compacted */
 
-/* Outer container */
 .wrapper {
     width: 100%;
     box-sizing: border-box;
-    padding: 16px;
+    padding: 12px;              /* reduced from 16px */
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;                   /* reduced gap */
     position: relative;
+
+    /* NEW: limit overall height and allow schedule area to scroll */
+    max-height: 80vh;           /* <= 80vh on desktop */
+    min-height: 0;              /* allow flex children to shrink properly */
 }
 
 /* Titles row: Radiant | (gap) | Dire */
 .titles {
     display: grid;
-    grid-template-columns: 1fr 80px 1fr;
+    /* a slightly smaller center gutter */
+    grid-template-columns: 1fr 56px 1fr;
     align-items: center;
-    gap: 16px;
-    margin-bottom: 8px;
-}
-
-.titleLeft,
-.titleRight {
-    font-weight: 700;
-    font-size: 14px;
-    color: #e6eef6;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-}
-
-/* center title placeholder to keep alignment */
-.titleCenter {
-    text-align: center;
-    font-size: 12px;
-    color: rgba(230,238,246,0.6);
+    gap: 8px;                   /* smaller gap */
+    margin-bottom: 4px;         /* tighter spacing */
+    flex: 0 0 auto;
 }
 
 /* schedule list - vertical stack of DraftChips */
 .schedule {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    width: 420px;
+    gap: 12px;                  /* from 24px -> 12px */
     position: relative;
-    /* ensure overlay sits above the content but below chips' badges */
-    overflow: visible;
+    overflow: auto;             /* scroll when content exceeds max-height */
+    flex: 1 1 auto;             /* allow schedule to expand inside wrapper */
+    padding-right: 6px;         /* small space to avoid touching overlay edge */
 }
 
-/* overlay covers left or right side of schedule area.
-   We'll place two overlays (left/right) and toggle their visibility via inline style or class */
+/* overlay and centerShade tweaks for compact mode */
 .overlayLeft,
 .overlayRight {
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 48%;
+    width: 46%;                 /* slightly narrower overlays */
     pointer-events: none;
     z-index: 5;
     border-radius: 8px;
 }
 
-/* left overlay anchored to left */
-.overlayLeft {
-    left: 0;
-}
-
-/* right overlay anchored to right */
-.overlayRight {
-    right: 0;
-}
-
-/* small helper to keep the center column visible above overlay */
+/* center shade narrower */
 .centerShade {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
-    width: 80px;
+    width: 64px;                /* from 80px -> 64px */
     top: 0;
     bottom: 0;
     z-index: 6;
     pointer-events: none;
 }
 
-/* optional note / legend area */
+/* Keep legend small if used */
 .legend {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     align-items: center;
     color: rgba(230,238,246,0.6);
-    font-size: 13px;
+    font-size: 12px;            /* slightly smaller */
+}
+
+/* responsive: allow even tighter spacing on narrow screens */
+@media (max-width: 640px) {
+    .wrapper { padding: 8px; gap:6px; }
+    .titles { grid-template-columns: 1fr 48px 1fr; gap:6px; }
+    .schedule { gap:10px; }
 }

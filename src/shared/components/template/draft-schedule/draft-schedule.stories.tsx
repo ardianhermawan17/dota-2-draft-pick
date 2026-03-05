@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react"
 import { DraftSchedule } from "./draft-schedule"
 import type {TemplateDraftRuleEntry} from "@shared/types/domain/template-draft-rules"; // your RTK Query hook
 import "@app/globals.css"
+import {Button} from "@shared/components/ui/button";
 
 const MOCK_ENTRIES: TemplateDraftRuleEntry[] = [
     { id: "e1", rule_id: "r1", sequence_index: 5, action_type: "ban", team_side: "radiant", count: 1, per_action_seconds: 30, note: "ban early", created_at: new Date().toISOString() },
@@ -180,7 +181,34 @@ function FetchAndRender({ id, activeSide }: { id?: string; activeSide?: "radiant
     if (!entriesArray) return <div style={{ padding: 20 }}>Loading…</div>
 
     return(
-        <DraftSchedule template_draft_rule_entries={entriesArray} active_time_side={activeSide ?? null} />
+        <div className="flex justify-center min-h-screen pt-10">
+            <div className="p-6 flex flex-col gap-8">
+                <DraftSchedule template_draft_rule_entries={entriesArray} active_time_side={activeSide ?? null} />
+            </div>
+        </div>
+    )
+}
+
+function ToggleableRender({id}: {id?: string}) {
+    const [entriesArray, setEntriesArray] = useState<TemplateDraftRuleEntry[] | null>(null)
+    const [isToggle, setIsToggle] = useState(false);
+
+
+    useEffect(() => {
+        setEntriesArray(() => {
+            return DATA_ENTRIES
+        })
+    }, [])
+
+    if (!entriesArray) return <div style={{ padding: 20 }}>Loading…</div>
+
+    return(
+        <div className="flex justify-center min-h-screen pt-10">
+            <div className="p-6 flex flex-col gap-8">
+                <Button onClick={() => setIsToggle((prevState) => !prevState)}>Toggle side</Button>
+                <DraftSchedule template_draft_rule_entries={entriesArray} active_time_side={isToggle ? "radiant" : "dire"} />
+            </div>
+        </div>
     )
 }
 
@@ -192,6 +220,6 @@ export const DireActive: Story = {
     render: () => <FetchAndRender id="60a4cd67-d017-4a99-83aa-cdd2df8f4918" activeSide="dire" />,
 }
 
-export const NoActive: Story = {
-    render: () => <FetchAndRender id="60a4cd67-d017-4a99-83aa-cdd2df8f4918" activeSide={null} />,
+export const ToggleAble: Story = {
+    render: () => <ToggleableRender id="60a4cd67-d017-4a99-83aa-cdd2df8f4918" />,
 }
