@@ -5,6 +5,7 @@ import {useLazyFindByIdQuery} from "@shared/api/draft-rules-api";
 import {DraftSchedule} from "@shared/components/template/draft-schedule";
 import type {TemplateDraftRuleEntry} from "@shared/types/domain/template-draft-rules";
 import {Button} from "@shared/components/ui/button";
+import {DraftAnnouncer} from "@shared/components/template/draft-announcer";
 
 const DATA_ENTRIES: TemplateDraftRuleEntry[] = [
     {
@@ -142,7 +143,8 @@ const DATA_ENTRIES: TemplateDraftRuleEntry[] = [
 ]
 export default function StaticDraftPage() {
     const [triggerGetFindByIdQuery, { data, isLoading }] = useLazyFindByIdQuery();
-    const [isToggle, setIsToggle] = useState(false);
+    const [isRadiant, setIsRadiant] = useState(true);
+    const [isPick, setIsPick] = useState(true);
 
     useEffect(() => {
         triggerGetFindByIdQuery({
@@ -161,11 +163,21 @@ export default function StaticDraftPage() {
             <div className="p-6 flex flex-col gap-8">
                 <h1 className="text-2xl font-bold">Static Draft Page</h1>
 
-                <Button onClick={() => setIsToggle((prevState) => !prevState)}>Toggle Side</Button>
+                <div className="flex justify-between gap-8">
+                    <Button onClick={() => setIsRadiant((prevState) => !prevState)}>Toggle Side</Button>
+                    <Button onClick={() => setIsPick((prevState) => !prevState)}>Toggle Action Type</Button>
+                </div>
                 {/* Container reads entities from Redux */}
+                <DraftAnnouncer
+                    active_time_side={isRadiant ? "radiant" : "dire"}  // "radiant" | "dire"
+                    active_action_type={isPick ? "pick" : "ban"} // "pick" | "ban"
+                    autoplayOnChange={true}
+                    cooldownMs={1500}
+                    volume={0.9}
+                />
                 <DraftSchedule
                     template_draft_rule_entries={DATA_ENTRIES}
-                    active_time_side={isToggle ? "radiant" : "dire"}
+                    active_time_side={isRadiant ? "radiant" : "dire"}
                     ruleId="60a4cd67-d017-4a99-83aa-cdd2df8f4918" // Pass the same ID
                 />
             </div>
