@@ -14,6 +14,7 @@ import entitiesSlice from "@feature/entities/stores/entities-slice";
 import staticDraftSlice from "@feature/static-draft/stores/static-draft-slice";
 import liveDraftSlice from "@feature/live-draft/stores/live-draft-slice";
 import {authApi} from "@feature/auth/api/auth-api";
+import {draftRulesApi} from "@shared/api/draft-rules-api";
 
 const rootReducer = combineReducers({
   auth: authSlice,
@@ -21,6 +22,7 @@ const rootReducer = combineReducers({
   staticDraft: staticDraftSlice,
   liveDraft: liveDraftSlice,
   [authApi.reducerPath]: authApi.reducer,
+  [draftRulesApi.reducerPath]: draftRulesApi.reducer,
 });
 
 const persistConfig = {
@@ -44,6 +46,7 @@ export const makeStore = () => {
       }).concat(
           // middleware API
           authApi.middleware,
+          draftRulesApi.middleware,
       ),
   });
 };

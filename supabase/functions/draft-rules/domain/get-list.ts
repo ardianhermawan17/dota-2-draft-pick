@@ -20,23 +20,13 @@ export async function handleGetList(req: Request) {
         .from("template_draft_rules")
         .select(`
       id,
+      game_mode_id,
       code,
       name,
       description,
       reserved_time,
       created_at,
-      updated_at,
-      game_modes ( id, code, name, created_at ),
-      template_draft_rule_entries (
-        id,
-        sequence_index,
-        action_type,
-        team_side,
-        count,
-        per_action_seconds,
-        note,
-        created_at
-      )
+      updated_at
     `)
         .eq("is_active", true)
         .order("created_at", { ascending: false })

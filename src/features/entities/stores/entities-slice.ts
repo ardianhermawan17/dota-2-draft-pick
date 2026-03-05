@@ -5,6 +5,9 @@ import type {User} from "@shared/types/domain/auth";
 import type {Hero} from "@shared/types/domain/heroes";
 import type {Ban, DraftPlan, PreferredPick} from "@shared/types/domain/draft-plans";
 import type {DraftSession, SessionAction} from "@shared/types/domain/sessions";
+import type {TemplateDraftRule, TemplateDraftRuleEntry} from "@shared/types/domain/template-draft-rules";
+import type {GameMode} from "@shared/types/domain/game-modes";
+import {normalizeTemplateDraftRuleEntries} from "@feature/entities/utils";
 
 const initialState: EntitiesState = {
     users: {},
@@ -16,8 +19,9 @@ const initialState: EntitiesState = {
     itemTimingNotes: {},
     draftSessions: {},
     sessionActions: {},
-    templateRules: {},
-    templateRuleEntries: {},
+    gameModes: {},
+    templateDraftRules: {},
+    templateDraftRuleEntries: {},
     teams: {},
     players: {},
 };
@@ -39,6 +43,45 @@ const entitiesSlice = createSlice({
             action.payload.forEach(hero => {
                 state.heroes[hero.open_dota_id] = hero;
             });
+        },
+
+        /* ---------- GAME MODES ---------- */
+
+        upsertGameModes(state, action: PayloadAction<GameMode>) {
+            state.gameModes[action.payload.id] = action.payload;
+        },
+
+        removeGameModes(state, action: PayloadAction<string>) {
+            delete state.gameModes[action.payload];
+        },
+        
+        /* ---------- TEMPLATE RULES ---------- */
+
+        upsertTemplateDraftRules(state, action: PayloadAction<TemplateDraftRule>) {
+            state.templateDraftRules[action.payload.id] = action.payload;
+        },
+
+        removeTemplateDraftRules(state, action: PayloadAction<string>) {
+            delete state.templateDraftRules[action.payload];
+        },
+
+        /* ---------- TEMPLATE RULES ENTRIES ---------- */
+
+        upsertTemplateDraftRuleEntries(state, action: PayloadAction<TemplateDraftRuleEntry>) {
+            state.templateDraftRuleEntries[action.payload.id] = action.payload;
+        },
+
+        upsertManyTemplateDraftRuleEntries(
+            state,
+            action: PayloadAction<TemplateDraftRuleEntry[]>
+        ) {
+            const normalized = normalizeTemplateDraftRuleEntries(action.payload);
+
+            Object.assign(state.templateDraftRuleEntries, normalized);
+        },
+
+        removeTemplateDraftRuleEntries(state, action: PayloadAction<string>) {
+            delete state.templateDraftRuleEntries[action.payload];
         },
 
         /* ---------- DRAFT PLANS ---------- */
@@ -92,6 +135,13 @@ export const {
     upsertHeroes,
     upsertDraftPlan,
     removeDraftPlan,
+    upsertGameModes,
+    removeGameModes,
+    upsertTemplateDraftRules,
+    removeTemplateDraftRules,
+    upsertTemplateDraftRuleEntries,
+    upsertManyTemplateDraftRuleEntries,
+    removeTemplateDraftRuleEntries,
     upsertBan,
     removeBan,
     upsertPreferredPick,

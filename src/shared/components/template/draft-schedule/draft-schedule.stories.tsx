@@ -1,10 +1,17 @@
-"use client";
+// draft-schedule.stories.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useEffect, useState } from "react"
+import type { Meta, StoryObj } from "@storybook/react"
+import { DraftSchedule } from "./draft-schedule"
+import type {TemplateDraftRuleEntry} from "@shared/types/domain/template-draft-rules"; // your RTK Query hook
+import "@app/globals.css"
 
-import { useEffect, useState } from "react";
-import {useLazyFindByIdQuery} from "@shared/api/draft-rules-api";
-import {DraftSchedule} from "@shared/components/template/draft-schedule";
-import type {TemplateDraftRuleEntry} from "@shared/types/domain/template-draft-rules";
-import {Button} from "@shared/components/ui/button";
+const MOCK_ENTRIES: TemplateDraftRuleEntry[] = [
+    { id: "e1", rule_id: "r1", sequence_index: 5, action_type: "ban", team_side: "radiant", count: 1, per_action_seconds: 30, note: "ban early", created_at: new Date().toISOString() },
+    { id: "e2", rule_id: "r1", sequence_index: 8, action_type: "pick", team_side: "radiant", count: 1, per_action_seconds: 30, note: null, created_at: new Date().toISOString() },
+    { id: "e3", rule_id: "r1", sequence_index: 9, action_type: "pick", team_side: "dire", count: 1, per_action_seconds: 30, note: null, created_at: new Date().toISOString() },
+    { id: "e4", rule_id: "r1", sequence_index: 10, action_type: "ban", team_side: "dire", count: 1, per_action_seconds: 30, note: "ban important", created_at: new Date().toISOString() },
+]
 
 const DATA_ENTRIES: TemplateDraftRuleEntry[] = [
     {
@@ -140,35 +147,51 @@ const DATA_ENTRIES: TemplateDraftRuleEntry[] = [
         "per_action_seconds": 30
     }
 ]
-export default function StaticDraftPage() {
-    const [triggerGetFindByIdQuery, { data, isLoading }] = useLazyFindByIdQuery();
-    const [isToggle, setIsToggle] = useState(false);
+
+const meta: Meta<typeof DraftSchedule> = {
+    title: "Draft/DraftSchedule",
+    component: DraftSchedule,
+}
+export default meta
+
+type Story = StoryObj<typeof DraftSchedule>
+
+/** helper to detect array payload shape in RTK Query response */
+
+// TODO :: Lanjutkan garap draft pick e
+function FetchAndRender({ id, activeSide }: { id?: string; activeSide?: "radiant" | "dire" | null }) {
+    const [entriesArray, setEntriesArray] = useState<TemplateDraftRuleEntry[] | null>(null)
+
 
     useEffect(() => {
-        triggerGetFindByIdQuery({
-            params: {
-                id: "60a4cd67-d017-4a99-83aa-cdd2df8f4918" // Replace with an actual UUID from your database
-            }
-        });
-    }, [triggerGetFindByIdQuery]);
+        setEntriesArray(() => {
+            return DATA_ENTRIES
+        })
+    }, [])
 
-    if (isLoading) {
-        return <div>Loading draft rules...</div>;
-    }
+    // fallback to MOCK if API doesn't return quickly
+    useEffect(() => {
+        const t = setTimeout(() => {
+            if (!entriesArray) setEntriesArray(MOCK_ENTRIES)
+        }, 450)
+        return () => clearTimeout(t)
+    }, [entriesArray])
 
-    return (
-        <div className="flex justify-center min-h-screen pt-20">
-            <div className="p-6 flex flex-col gap-8">
-                <h1 className="text-2xl font-bold">Static Draft Page</h1>
+    if (!entriesArray) return <div style={{ padding: 20 }}>Loading…</div>
 
-                <Button onClick={() => setIsToggle((prevState) => !prevState)}>Toggle shit</Button>
-                {/* Container reads entities from Redux */}
-                <DraftSchedule
-                    template_draft_rule_entries={DATA_ENTRIES}
-                    active_time_side={isToggle ? "radiant" : "dire"}
-                    ruleId="60a4cd67-d017-4a99-83aa-cdd2df8f4918" // Pass the same ID
-                />
-            </div>
-        </div>
-    );
+    return(
+        <DraftSchedule template_draft_rule_entries={entriesArray} active_time_side={activeSide ?? null} />
+    )
+}
+
+export const RadiantActive: Story = {
+    render: () => <FetchAndRender id="60a4cd67-d017-4a99-83aa-cdd2df8f4918" activeSide="radiant" />,
+}
+
+export const DireActive: Story = {
+    render: () => <FetchAndRender id="60a4cd67-d017-4a99-83aa-cdd2df8f4918" activeSide="dire" />,
+}
+
+export const NoActive: Story = {
+    render: () => <FetchAndRender id="60a4cd67-d017-4a99-83aa-cdd2df8f4918" activeSide={null} />,
 }

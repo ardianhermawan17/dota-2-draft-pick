@@ -6,6 +6,8 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
 // @ts-ignore
 import {handleGetList} from "./domain/get-list.ts";
+// @ts-ignore
+import {handleFindById} from "./domain/find-by-id.ts";
 
 Deno.serve(async (req) => {
   try {
@@ -33,6 +35,10 @@ Deno.serve(async (req) => {
 
     if (route === "get-list" && req.method === "GET") {
       return await handleGetList(req);
+    }
+
+    if (route === "find-by-id" && req.method === "GET") {
+      return await handleFindById(req);
     }
 
     return new Response(JSON.stringify({ message: "Not Found" }), {

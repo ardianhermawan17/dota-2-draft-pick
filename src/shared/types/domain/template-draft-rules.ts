@@ -20,7 +20,7 @@ export type TemplateDraftRule = {
  */
 export type TemplateDraftRuleEntry = {
     id: UUID;
-    rule_id: UUID;
+    rule_id: UUID; // FK to template_draft_rules.id
     sequence_index: number;
     action_type: "ban" | "pick";
     team_side: "radiant" | "dire";

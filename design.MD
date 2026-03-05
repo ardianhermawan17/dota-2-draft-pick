@@ -220,7 +220,7 @@ src/
 │       │   ├── hooks/
 │       │   │   └── use-heroes.ts
 │       │   ├── normalization/
-│       │   │   └── hero.normalizer.ts
+│       │   │   └── hero.normalizers.ts
 │       │   └── slices/
 │       │       └── hero.slice.ts
 │       └── teams/

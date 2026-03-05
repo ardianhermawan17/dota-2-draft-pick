@@ -1,0 +1,91 @@
+/* draft-schedule.module.css */
+
+/* Outer container */
+.wrapper {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+}
+
+/* Titles row: Radiant | (gap) | Dire */
+.titles {
+    display: grid;
+    grid-template-columns: 1fr 80px 1fr;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+.titleLeft,
+.titleRight {
+    font-weight: 700;
+    font-size: 14px;
+    color: #e6eef6;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+/* center title placeholder to keep alignment */
+.titleCenter {
+    text-align: center;
+    font-size: 12px;
+    color: rgba(230,238,246,0.6);
+}
+
+/* schedule list - vertical stack of DraftChips */
+.schedule {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    position: relative;
+    /* ensure overlay sits above the content but below chips' badges */
+    overflow: visible;
+}
+
+/* overlay covers left or right side of schedule area.
+   We'll place two overlays (left/right) and toggle their visibility via inline style or class */
+.overlayLeft,
+.overlayRight {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 48%;
+    pointer-events: none;
+    z-index: 5;
+    border-radius: 8px;
+}
+
+/* left overlay anchored to left */
+.overlayLeft {
+    left: 0;
+}
+
+/* right overlay anchored to right */
+.overlayRight {
+    right: 0;
+}
+
+/* small helper to keep the center column visible above overlay */
+.centerShade {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    top: 0;
+    bottom: 0;
+    z-index: 6;
+    pointer-events: none;
+}
+
+/* optional note / legend area */
+.legend {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    color: rgba(230,238,246,0.6);
+    font-size: 13px;
+}

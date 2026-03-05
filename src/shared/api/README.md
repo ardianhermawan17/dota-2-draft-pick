@@ -4,5 +4,5 @@
 
 ```
 shared/utils/fetch-base-query.ts  ✅ (transport layer)
-features/auth/api/authApi.ts      ✅ (domain layer)
+features/auth/api/draftRulesApi.ts      ✅ (domain layer)
 ```

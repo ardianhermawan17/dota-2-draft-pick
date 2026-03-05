@@ -1,0 +1,164 @@
+/* draft-chip.module.css - grid based stable layout */
+
+.wrapper {
+    /* 3-column grid: left - center (fixed) - right */
+    display: grid;
+    grid-template-columns: minmax(120px, 1fr) 80px minmax(120px, 1fr);
+    align-items: center;            /* center content vertically in each row */
+    gap: 16px;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 12px;
+    /* allow badge to overflow outside row bounds if needed */
+    overflow: visible;
+    min-height: 72px;               /* unify row height for consistent vertical rhythm */
+    /* tweak for background contrast in storybook or app */
+}
+
+/* left / right columns wrappers */
+.col {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+/* left content should push items to the right end of left column */
+.left {
+    justify-content: flex-end;
+    padding-right: 8px;
+}
+
+/* right content should push items to the left start of right column */
+.right {
+    justify-content: flex-start;
+    padding-left: 8px;
+}
+
+/* center column with sequence number */
+.center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    height: 100%;
+}
+
+.sequence {
+    font-weight: 700;
+    font-size: 20px;
+    color: #e6eef6;
+    line-height: 1;
+    /* small visual separation so connector doesn't touch number */
+    padding: 4px 6px;
+    z-index: 5;
+}
+
+/* connectors: left / right - always occupy width but visibility toggled in JS */
+.connector {
+    width: 48px;
+    height: 4px;
+    border-radius: 4px;
+    background: rgba(203,213,225,0.18);
+    margin: 0 8px;
+}
+
+/* CARD - outer wrapper is relative and allows overflow,
+   inner element clips image for rounded corners */
+.card {
+    position: relative;     /* badge positioned relative to this */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;             /* inner holds padding/contents */
+    background: transparent;
+    overflow: visible;      /* allow badge to overflow the corner */
+    min-width: 96px;
+    min-height: 48px;
+}
+
+/* inner wrapper that actually draws the card background + rounded corners and clips image */
+.cardInner {
+    overflow: hidden; /* clip the image to rounded shape */
+    border-radius: 12px;
+    background: rgba(17,24,39,0.6);
+    border: 1px solid rgba(255,255,255,0.04);
+    box-shadow: 0 6px 18px rgba(2,6,23,0.5);
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    min-width: 96px;
+    min-height: 48px;
+    box-sizing: border-box;
+}
+
+/* size variants */
+.cardInner.regular { width: 96px; height: 48px; }
+.cardInner.pick { width: 116px; height: 56px; transform: scale(1.0); }
+
+/* hero image inside the inner wrapper */
+.heroImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+/* BAN / PICK label container when no hero image */
+.cardLabelContainer {
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: rgba(40,44,52,0.6);
+    border: 1px solid rgba(255,255,255,0.03);
+}
+.cardLabel {
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #e6eef6;
+}
+
+/* desaturated look for banned hero */
+.desaturate {
+    filter: grayscale(100%) contrast(0.85) brightness(0.7);
+}
+
+/* Badge that overlaps corner (absolute relative to .card) */
+.banOverlay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    transform: translate(40%, -40%); /* push outside corner */
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ef4444;
+    color: white;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.5);
+    z-index: 20;
+    pointer-events: none; /* non-interactive */
+}
+
+/* invisible placeholder card to preserve spacing when a side is empty */
+.invisibleCard {
+    width: 96px;
+    height: 48px;
+    visibility: visible;    /* still occupies space */
+    opacity: 0;             /* not visible */
+    pointer-events: none;
+}
+
+/* responsive tweaks if needed (optional) */
+@media (max-width: 640px) {
+    .wrapper { grid-template-columns: minmax(80px, 1fr) 64px minmax(80px, 1fr); min-height:64px; }
+    .cardInner { border-radius: 10px; }
+    .banOverlay { width:26px; height:26px; transform: translate(40%, -40%); }
+}
