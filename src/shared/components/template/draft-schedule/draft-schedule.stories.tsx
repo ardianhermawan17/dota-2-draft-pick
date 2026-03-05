@@ -1,20 +1,12 @@
-// draft-schedule.stories.tsx
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useEffect, useState } from "react"
-import type { Meta, StoryObj } from "@storybook/react"
-import { DraftSchedule } from "./draft-schedule"
-import type {TemplateDraftRuleEntry} from "@shared/types/domain/template-draft-rules"; // your RTK Query hook
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { useState } from "react";
+import { Button } from "@shared/components/ui/button";
+import { DraftSchedule } from "./draft-schedule";
+import { DraftAnnouncer } from "../draft-announcer";
+import type { TemplateDraftRuleEntry } from "@shared/types/domain/template-draft-rules";
 import "@app/globals.css"
-import {Button} from "@shared/components/ui/button";
 
-const MOCK_ENTRIES: TemplateDraftRuleEntry[] = [
-    { id: "e1", rule_id: "r1", sequence_index: 5, action_type: "ban", team_side: "radiant", count: 1, per_action_seconds: 30, note: "ban early", created_at: new Date().toISOString() },
-    { id: "e2", rule_id: "r1", sequence_index: 8, action_type: "pick", team_side: "radiant", count: 1, per_action_seconds: 30, note: null, created_at: new Date().toISOString() },
-    { id: "e3", rule_id: "r1", sequence_index: 9, action_type: "pick", team_side: "dire", count: 1, per_action_seconds: 30, note: null, created_at: new Date().toISOString() },
-    { id: "e4", rule_id: "r1", sequence_index: 10, action_type: "ban", team_side: "dire", count: 1, per_action_seconds: 30, note: "ban important", created_at: new Date().toISOString() },
-]
-
-const DATA_ENTRIES: TemplateDraftRuleEntry[] = [
+const SAMPLE_ENTRIES: TemplateDraftRuleEntry[] = [
     {
         "id": "4f509663-d805-4f50-9cff-7ec0789b0926",
         "note": "Initial radian ban 4",
@@ -147,79 +139,103 @@ const DATA_ENTRIES: TemplateDraftRuleEntry[] = [
         "sequence_index": 12,
         "per_action_seconds": 30
     }
-]
+];
 
 const meta: Meta<typeof DraftSchedule> = {
     title: "Draft/DraftSchedule",
     component: DraftSchedule,
-}
-export default meta
+    parameters: {
+        layout: "centered",
+        backgrounds: { default: "dark" },
+    },
+    tags: ["autodocs"],
+    argTypes: {
+        active_time_side: { control: "select", options: ["radiant", "dire"] },
+        ruleId: { control: "text" },
+        className: { control: "text" },
+    },
+    // do NOT pass SAMPLE_ENTRIES here; we'll inject per-story to avoid serialization issues
+};
 
-type Story = StoryObj<typeof DraftSchedule>
+export default meta;
+type Story = StoryObj<typeof DraftSchedule>;
 
-/** helper to detect array payload shape in RTK Query response */
-
-// TODO :: Lanjutkan garap draft pick e
-function FetchAndRender({ id, activeSide }: { id?: string; activeSide?: "radiant" | "dire" | null }) {
-    const [entriesArray, setEntriesArray] = useState<TemplateDraftRuleEntry[] | null>(null)
-
-
-    useEffect(() => {
-        setEntriesArray(() => {
-            return DATA_ENTRIES
-        })
-    }, [])
-
-    // fallback to MOCK if API doesn't return quickly
-    useEffect(() => {
-        const t = setTimeout(() => {
-            if (!entriesArray) setEntriesArray(MOCK_ENTRIES)
-        }, 450)
-        return () => clearTimeout(t)
-    }, [entriesArray])
-
-    if (!entriesArray) return <div style={{ padding: 20 }}>Loading…</div>
-
-    return(
-        <div className="flex justify-center min-h-screen pt-10">
-            <div className="p-6 flex flex-col gap-8">
-                <DraftSchedule template_draft_rule_entries={entriesArray} active_time_side={activeSide ?? null} />
-            </div>
-        </div>
-    )
-}
-
-function ToggleableRender({id}: {id?: string}) {
-    const [entriesArray, setEntriesArray] = useState<TemplateDraftRuleEntry[] | null>(null)
-    const [isToggle, setIsToggle] = useState(false);
-
-
-    useEffect(() => {
-        setEntriesArray(() => {
-            return DATA_ENTRIES
-        })
-    }, [])
-
-    if (!entriesArray) return <div style={{ padding: 20 }}>Loading…</div>
-
-    return(
-        <div className="flex justify-center min-h-screen pt-10">
-            <div className="p-6 flex flex-col gap-8">
-                <Button onClick={() => setIsToggle((prevState) => !prevState)}>Toggle side</Button>
-                <DraftSchedule template_draft_rule_entries={entriesArray} active_time_side={isToggle ? "radiant" : "dire"} />
-            </div>
-        </div>
-    )
-}
-
+/** Radiant active — visible container + passes SAMPLE_ENTRIES directly */
 export const RadiantActive: Story = {
-    render: () => <FetchAndRender id="60a4cd67-d017-4a99-83aa-cdd2df8f4918" activeSide="radiant" />,
-}
+    args: {
+        active_time_side: "radiant",
+    },
+    render: (args) => (
+        <div className="p-6 w-130 h-[70vh] rounded-lg bg-linear-to-r from-slate-900 via-black to-slate-900">
+            <DraftSchedule {...args} template_draft_rule_entries={SAMPLE_ENTRIES} />
+        </div>
+    ),
+};
 
+/** Dire active */
 export const DireActive: Story = {
-    render: () => <FetchAndRender id="60a4cd67-d017-4a99-83aa-cdd2df8f4918" activeSide="dire" />,
-}
+    args: {
+        active_time_side: "dire",
+    },
+    render: (args) => (
+        <div className="p-6 w-130 h-[70vh] rounded-lg bg-linear-to-r from-slate-900 via-black to-slate-900">
+            <DraftSchedule {...args} template_draft_rule_entries={SAMPLE_ENTRIES} />
+        </div>
+    ),
+};
 
-export const ToggleAble: Story = {
-    render: () => <ToggleableRender id="60a4cd67-d017-4a99-83aa-cdd2df8f4918" />,
-}
+/** Long draft column — shows scrolling behavior */
+export const LongDraftColumn: Story = {
+    render: (args) => {
+        // build long list (keeps original entries intact)
+        const long = Array.from({ length: 18 }).flatMap((_, i) => {
+            const base = SAMPLE_ENTRIES[i % SAMPLE_ENTRIES.length];
+            // keep sequence_index incremental and id unique
+            return [{ ...base, id: `${base.id}-${i}`, sequence_index: i + 1 }];
+        });
+        return (
+            <div className="p-4 w-130 h-[70vh] rounded-lg bg-[#071027]">
+                <DraftSchedule {...args} template_draft_rule_entries={long} />
+            </div>
+        );
+    },
+};
+
+/** Toggleable interactive story (mimics your page) */
+export const ToggleableCondition: Story = {
+    render: (args) => {
+        const [isRadiant, setIsRadiant] = useState(true);
+        const [isPick, setIsPick] = useState(true);
+
+        return (
+            <div className="flex gap-6 p-6">
+                <div className="w-130 rounded-lg bg-[#071027] p-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="text-slate-200 font-semibold">
+                            {isRadiant ? "Radiant" : "Dire"} — {isPick ? "Pick" : "Ban"}
+                        </div>
+                        <div className="flex gap-2">
+                            <Button onClick={() => setIsRadiant((p) => !p)}>Toggle Side</Button>
+                            <Button onClick={() => setIsPick((p) => !p)}>Toggle Action</Button>
+                        </div>
+                    </div>
+
+                    {/* announcer included so you can test audio while toggling */}
+                    <DraftAnnouncer
+                        active_time_side={isRadiant ? "radiant" : "dire"}
+                        active_action_type={isPick ? "pick" : "ban"}
+                        autoplayOnChange
+                        cooldownMs={1000}
+                        volume={0.9}
+                    />
+
+                    <DraftSchedule
+                        {...args}
+                        active_time_side={isRadiant ? "radiant" : "dire"}
+                        template_draft_rule_entries={SAMPLE_ENTRIES}
+                    />
+                </div>
+            </div>
+        );
+    },
+};
