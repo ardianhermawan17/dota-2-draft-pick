@@ -27,8 +27,6 @@ export function useHeroItem({ hero, onClick }: UseHeroItemParams) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setUseFallbackImage(false);
-    console.log(hero.name)
-    console.log(getHeroImagePath(hero))
   }, [hero.open_dota_id, hero.slug, hero.name]);
 
   const imageSrc = useMemo(

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ImgHTMLAttributes } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { createMockHeroes } from "@shared/components/template/__mocks__/heroes.mock";
+import { createRealHeroes} from "@shared/components/template/__mocks__/heroes.mock";
 import type { HeroWithStatus } from "./list-heroes";
 import { ListHeroes } from "./list-heroes";
 
@@ -44,7 +44,7 @@ describe("ListHeroes", () => {
   });
 
   it("renders correct number of HeroItem children", () => {
-    const heroes: HeroWithStatus[] = createMockHeroes(4, "intelligence").map((hero) => ({ hero }));
+    const heroes: HeroWithStatus[] = createRealHeroes(4, "intelligence").map((hero) => ({ hero }));
     render(<ListHeroes attribute="intelligence" heroes={heroes} />);
 
     expect(screen.getAllByTestId("hero-item-mock")).toHaveLength(4);
@@ -58,7 +58,7 @@ describe("ListHeroes", () => {
   it("passes correct status to each HeroItem", () => {
     heroItemSpy.mockClear();
 
-    const [hero1, hero2, hero3] = createMockHeroes(3, "strength");
+    const [hero1, hero2, hero3] = createRealHeroes(3, "strength");
     const heroes: HeroWithStatus[] = [
       { hero: hero1, status: "normal" },
       { hero: hero2, status: "banned" },
@@ -86,7 +86,7 @@ describe("ListHeroes", () => {
 
   it("passes correct onHeroClick to each HeroItem", () => {
     const onHeroClick = vi.fn();
-    const hero = createMockHeroes(1, "strength")[0];
+    const hero = createRealHeroes(1, "strength")[0];
     const heroes: HeroWithStatus[] = [{ hero, status: "normal" }];
 
     render(<ListHeroes attribute="strength" heroes={heroes} onHeroClick={onHeroClick} />);
