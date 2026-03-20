@@ -17,6 +17,7 @@ export type DraftScheduleProps = {
     className?: string
 }
 
+// TODO: Make a Hero componnent list
 /**
  * Presentational DraftSchedule:
  * - accepts array of TemplateDraftRuleEntry (complete data)
