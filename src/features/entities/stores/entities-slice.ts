@@ -91,7 +91,16 @@ const entitiesSlice = createSlice({
         },
 
         removeDraftPlan(state, action: PayloadAction<string>) {
-            delete state.draftPlans[action.payload];
+            const planId = action.payload;
+            delete state.draftPlans[planId];
+
+            // cascade
+            Object.values(state.bans).forEach(ban => {
+                if (ban.plan_id === planId) delete state.bans[ban.id];
+            });
+            Object.values(state.preferredPicks).forEach(pick => {
+                if (pick.plan_id === planId) delete state.preferredPicks[pick.id];
+            });
         },
 
         /* ---------- BANS ---------- */
@@ -121,7 +130,12 @@ const entitiesSlice = createSlice({
         },
 
         upsertSessionAction(state, action: PayloadAction<SessionAction>) {
-            state.sessionActions[action.payload.id] = action.payload;
+            // state.sessionActions[action.payload.id] = action.payload;
+            const existing = state.sessionActions[action.payload.id];
+            // Only update if incoming is newer (or doesn't exist)
+            if (!existing || action.payload.created_at >= existing.created_at) {
+                state.sessionActions[action.payload.id] = action.payload;
+            }
         },
 
         resetEntities() {
