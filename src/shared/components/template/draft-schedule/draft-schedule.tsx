@@ -17,7 +17,7 @@ export type DraftScheduleProps = {
     className?: string
 }
 
-// TODO: Make a Hero componnent list
+// TODO: Make a Button below draft-schedule "dynamicaly" updated from picked hero.
 /**
  * Presentational DraftSchedule:
  * - accepts array of TemplateDraftRuleEntry (complete data)
