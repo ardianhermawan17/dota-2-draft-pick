@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useState } from 'react';
 import { Button } from '@shared/components/ui/button';
 import { DraftSchedule } from './draft-schedule';
+import { DraftScheduleSkeleton } from './draft-schedule-skeleton';
 import { DraftAnnouncer } from '../draft-announcer';
 import type { TemplateDraftRuleEntry } from '@shared/types/domain/template-draft-rules';
 import '@app/globals.css';
@@ -251,6 +252,14 @@ export const ConstrainedParentWidth: Story = {
 	render: (args) => (
 		<div className='w-88 rounded-lg bg-[#071027] p-3 h-[70vh]'>
 			<DraftSchedule {...args} template_draft_rule_entries={SAMPLE_ENTRIES} />
+		</div>
+	),
+};
+
+export const LoadingComponent: Story = {
+	render: () => (
+		<div className='w-full max-w-130 min-w-80 rounded-lg bg-[#071027] p-4 h-[70vh]'>
+			<DraftScheduleSkeleton />
 		</div>
 	),
 };
