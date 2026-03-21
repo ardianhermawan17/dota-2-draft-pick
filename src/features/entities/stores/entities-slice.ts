@@ -7,7 +7,8 @@ import type {Ban, DraftPlan, PreferredPick} from "@shared/types/domain/draft-pla
 import type {DraftSession, SessionAction} from "@shared/types/domain/sessions";
 import type {TemplateDraftRule, TemplateDraftRuleEntry} from "@shared/types/domain/template-draft-rules";
 import type {GameMode} from "@shared/types/domain/game-modes";
-import {normalizeTemplateDraftRuleEntries} from "@feature/entities/utils";
+import type {OpenDotaHeroRaw} from "@shared/api/hero-api";
+import {normalizeTemplateDraftRuleEntries, normalizeHeroes} from "@feature/entities/utils";
 
 const initialState: EntitiesState = {
     users: {},
@@ -43,6 +44,15 @@ const entitiesSlice = createSlice({
             action.payload.forEach(hero => {
                 state.heroes[hero.open_dota_id] = hero;
             });
+        },
+
+        upsertManyHeroes(state, action: PayloadAction<OpenDotaHeroRaw[]>) {
+            const normalized = normalizeHeroes(action.payload);
+            Object.assign(state.heroes, normalized);
+        },
+
+        removeHero(state, action: PayloadAction<number>) {
+            delete state.heroes[action.payload];
         },
 
         /* ---------- GAME MODES ---------- */
@@ -147,6 +157,8 @@ const entitiesSlice = createSlice({
 export const {
     upsertUser,
     upsertHeroes,
+    upsertManyHeroes,
+    removeHero,
     upsertDraftPlan,
     removeDraftPlan,
     upsertGameModes,
