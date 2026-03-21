@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { createRealHeroes } from '@shared/components/template/__mocks__/heroes.mock';
 import type { HeroStatus } from '@shared/components/template/hero-item';
 import { ListHeroes } from './list-heroes';
+import { ListHeroesSkeleton } from './list-heroes-skeleton';
+import '@app/globals.css';
 
 const withStatus = (
 	count: number,
@@ -95,4 +97,8 @@ export const UniversalFourColumns: Story = {
 		attribute: 'universal',
 		heroes: withStatus(12, 'universal'),
 	},
+};
+
+export const LoadingComponent: Story = {
+	render: () => (<div className='flex flex-row w-full gap-4 lg:items-start'><ListHeroesSkeleton /></div>),
 };
