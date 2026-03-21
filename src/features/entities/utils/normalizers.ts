@@ -36,6 +36,9 @@ function filterLocalizedName(localizedName: string): string {
     // Step 3: Lowercase
     slug = slug.toLowerCase();
 
+    // Step 4: Remove apostrophes (merge text)
+    slug = slug.replace(/'/g, "");
+
     return slug;
 }
 

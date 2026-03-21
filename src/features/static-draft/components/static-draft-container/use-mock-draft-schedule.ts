@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@shared/config/redux/hooks";
 import { useLazyFindByIdQuery } from "@shared/api/draft-rules-api";
-import { selectTemplateDraftRuleEntriesByRuleId } from "@shared/selectors";
+import { selectTemplateDraftRuleEntriesByRuleId } from "@feature/entities/selectors";
 import {
   chooseSide,
   selectTemplate,
