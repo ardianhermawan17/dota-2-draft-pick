@@ -1,6 +1,8 @@
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import storage from "redux-persist/lib/storage";
 import { persistReducer } from "redux-persist";
+import type { PersistConfig } from "redux-persist";
+import autoMergeLevel2 from "redux-persist/lib/stateReconciler/autoMergeLevel2";
 import {
   FLUSH,
   PAUSE,
@@ -15,6 +17,7 @@ import staticDraftSlice from "@feature/static-draft/stores/static-draft-slice";
 import liveDraftSlice from "@feature/live-draft/stores/live-draft-slice";
 import {authApi} from "@feature/auth/api/auth-api";
 import {draftRulesApi} from "@shared/api/draft-rules-api";
+import {heroApi} from "@shared/api/hero-api";
 
 const rootReducer = combineReducers({
   auth: authSlice,
@@ -23,17 +26,20 @@ const rootReducer = combineReducers({
   liveDraft: liveDraftSlice,
   [authApi.reducerPath]: authApi.reducer,
   [draftRulesApi.reducerPath]: draftRulesApi.reducer,
+  [heroApi.reducerPath]: heroApi.reducer,
 });
 
-const persistConfig = {
+type RootReducerState = ReturnType<typeof rootReducer>;
+
+const persistConfig: PersistConfig<RootReducerState> = {
   key: "root",
   version: 1,
   storage,
-  whiteList: ["auth","entities", "staticDraft", "liveDraft"],
-  blacklist: [""],
+  whitelist: ["auth", "entities", "staticDraft", "liveDraft"],
+  stateReconciler: autoMergeLevel2,
 };
 
-const persistedReducer = persistReducer(persistConfig, rootReducer);
+const persistedReducer = persistReducer<RootReducerState>(persistConfig, rootReducer);
 
 export const makeStore = () => {
   return configureStore({
@@ -47,6 +53,7 @@ export const makeStore = () => {
           // middleware API
           authApi.middleware,
           draftRulesApi.middleware,
+          heroApi.middleware,
       ),
   });
 };
@@ -54,5 +61,5 @@ export const makeStore = () => {
 // Infer the type of makeStore
 export type AppStore = ReturnType<typeof makeStore>;
 // Infer the `RootState` and `AppDispatch` types from the store itself
-export type RootState = ReturnType<AppStore["getState"]>;
+export type RootState = RootReducerState;
 export type AppDispatch = AppStore["dispatch"];
