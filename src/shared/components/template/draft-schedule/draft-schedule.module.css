@@ -1,78 +1,92 @@
 /* draft-schedule.module.css — compacted */
 
 .wrapper {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 12px;              /* reduced from 16px */
-    display: flex;
-    flex-direction: column;
-    gap: 8px;                   /* reduced gap */
-    position: relative;
+	width: 100%;
+	min-width: 22rem;
+	max-width: 100%;
+	box-sizing: border-box;
+	padding: 12px; /* reduced from 16px */
+	display: flex;
+	flex-direction: column;
+	/*gap: 8px; !* reduced gap *!*/
+	position: relative;
 
-    /* NEW: limit overall height and allow schedule area to scroll */
-    max-height: 80vh;           /* <= 80vh on desktop */
-    min-height: 0;              /* allow flex children to shrink properly */
+	/* NEW: limit overall height and allow schedule area to scroll */
+	max-height: 80vh; /* <= 80vh on desktop */
+	min-height: 0; /* allow flex children to shrink properly */
 }
 
 /* Titles row: Radiant | (gap) | Dire */
 .titles {
-    display: grid;
-    /* a slightly smaller center gutter */
-    grid-template-columns: 1fr 56px 1fr;
-    align-items: center;
-    gap: 8px;                   /* smaller gap */
-    margin-bottom: 4px;         /* tighter spacing */
-    flex: 0 0 auto;
+	display: grid;
+	/* a slightly smaller center gutter */
+	grid-template-columns: 1fr 56px 1fr;
+	align-items: center;
+	gap: 8px; /* smaller gap */
+	margin-bottom: 4px; /* tighter spacing */
+	flex: 0 0 auto;
 }
 
 /* schedule list - vertical stack of DraftChips */
 .schedule {
-    display: flex;
-    flex-direction: column;
-    width: 420px;
-    gap: 12px;                  /* from 24px -> 12px */
-    position: relative;
-    overflow: auto;             /* scroll when content exceeds max-height */
-    flex: 1 1 auto;             /* allow schedule to expand inside wrapper */
-    padding-right: 6px;         /* small space to avoid touching overlay edge */
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	min-width: 10rem;
+	max-width: 100%;
+	gap: 4px; /* from 24px -> 12px */
+	position: relative;
+	overflow: auto; /* scroll when content exceeds max-height */
+	flex: 1 1 auto; /* allow schedule to expand inside wrapper */
+	padding-right: 6px; /* small space to avoid touching overlay edge */
 }
 
 /* overlay and centerShade tweaks for compact mode */
 .overlayLeft,
 .overlayRight {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 46%;                 /* slightly narrower overlays */
-    pointer-events: none;
-    z-index: 5;
-    border-radius: 8px;
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 26%; /* slightly narrower overlays */
+	pointer-events: none;
+	z-index: 5;
+	border-radius: 8px;
 }
 
 /* center shade narrower */
 .centerShade {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 64px;                /* from 80px -> 64px */
-    top: 0;
-    bottom: 0;
-    z-index: 6;
-    pointer-events: none;
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 64px; /* from 80px -> 64px */
+	top: 0;
+	bottom: 0;
+	z-index: 6;
+	pointer-events: none;
 }
 
 /* Keep legend small if used */
 .legend {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    color: rgba(230,238,246,0.6);
-    font-size: 12px;            /* slightly smaller */
+	display: flex;
+	gap: 6px;
+	align-items: center;
+	color: rgba(230, 238, 246, 0.6);
+	font-size: 12px; /* slightly smaller */
 }
 
 /* responsive: allow even tighter spacing on narrow screens */
 @media (max-width: 640px) {
-    .wrapper { padding: 8px; gap:6px; }
-    .titles { grid-template-columns: 1fr 48px 1fr; gap:6px; }
-    .schedule { gap:10px; }
+	.wrapper {
+		padding: 8px;
+		gap: 6px;
+		min-width: 0;
+	}
+	.titles {
+		grid-template-columns: 1fr 48px 1fr;
+		gap: 6px;
+	}
+	.schedule {
+		gap: 10px;
+		min-width: 0;
+	}
 }
