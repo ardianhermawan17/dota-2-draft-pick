@@ -152,6 +152,8 @@ export function useStaticDraftContainer() {
       intelligence: [],
       universal: [],
     };
+    console.log('heroesById')
+    console.log(heroes)
 
     const sortedHeroes = [...heroes].sort((a, b) => {
       const nameA = a.local_name ?? a.name ?? "";
